@@ -118,7 +118,7 @@ type Agent struct {
 
 // NewAgent create and initialize an agent.
 func NewAgent() *Agent {
-	a := &Agent{ctx: Asn1Context()}
+	a := &Agent{Ctx: Asn1Context()}
 	a.SetLogger(nil)
 	a.SetCommunities("public", "private")
 	return a
@@ -187,12 +187,12 @@ func (a *Agent) AddRwManagedObject(oid asn1.Oid, getter Getter,
 			return VarErrorf(NotWritable, "OID %s is not writable", oid)
 		}
 	}
-	if a.getManagedObject(oid, false) != nil {
+	if a.GetManagedObject(oid, false) != nil {
 		return fmt.Errorf("OID %d is already registered", oid)
 	}
 	h := ManagedObject{oid, nil, getter, setter}
 	a.Handlers = append(a.Handlers, h)
-	sort.Sort(sortableManagedObjects(a.Handlers))
+	sort.Sort(SortableManagedObjects(a.Handlers))
 	return nil
 }
 
@@ -248,12 +248,12 @@ func (a *Agent) ProcessMessage(request *Message) (response *Message, err error) 
 	var res GetResponsePdu
 	switch pdu := request.Pdu.(type) {
 	case GetRequestPdu:
-		res = a.processPdu(Pdu(pdu), false, false)
+		res = a.ProcessPdu(Pdu(pdu), false, false)
 	case GetNextRequestPdu:
-		res = a.processPdu(Pdu(pdu), true, false)
+		res = a.ProcessPdu(Pdu(pdu), true, false)
 	case SetRequestPdu:
 		if rw {
-			res = a.processPdu(Pdu(pdu), false, true)
+			res = a.ProcessPdu(Pdu(pdu), false, true)
 		} else {
 			res = GetResponsePdu(pdu)
 			res.ErrorIndex = 1
