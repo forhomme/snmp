@@ -109,11 +109,11 @@ type Setter func(oid asn1.Oid, value interface{}) error
 
 // Agent is a transport independent engine to process SNMP requests.
 type Agent struct {
-	log      *log.Logger
-	ctx      *asn1.Context
-	handlers []managedObject
-	public   string
-	private  string
+	Log      *log.Logger
+	Ctx      *asn1.Context
+	Handlers []ManagedObject
+	Public   string
+	Private  string
 }
 
 // NewAgent create and initialize an agent.
@@ -129,27 +129,27 @@ func (a *Agent) SetLogger(logger *log.Logger) {
 	if logger == nil {
 		logger = log.New(ioutil.Discard, "", 0)
 	}
-	a.log = logger
-	a.ctx.SetLogger(logger)
+	a.Log = logger
+	a.Ctx.SetLogger(logger)
 }
 
 // SetCommunities defines the public and private communities.
 func (a *Agent) SetCommunities(public, private string) {
-	a.public, a.private = public, private
+	a.Public, a.Private = public, private
 }
 
 // checkCommunity handles "authentication" and acls
-func (a *Agent) checkCommunity(community string) (rw bool, err error) {
+func (a *Agent) CheckCommunity(community string) (rw bool, err error) {
 
 	// Access check. Right now only read-only community is implemented
-	if community != a.public && community != a.private {
+	if community != a.Public && community != a.Private {
 		// The agent should ignore invalid communities
 		err = fmt.Errorf("invalid community \"%s\"", community)
 		return
 	}
 
 	// Super complex ACLs
-	if community == a.private {
+	if community == a.Private {
 		rw = true
 	}
 	return
@@ -190,35 +190,35 @@ func (a *Agent) AddRwManagedObject(oid asn1.Oid, getter Getter,
 	if a.getManagedObject(oid, false) != nil {
 		return fmt.Errorf("OID %d is already registered", oid)
 	}
-	h := managedObject{oid, nil, getter, setter}
-	a.handlers = append(a.handlers, h)
-	sort.Sort(sortableManagedObjects(a.handlers))
+	h := ManagedObject{oid, nil, getter, setter}
+	a.Handlers = append(a.Handlers, h)
+	sort.Sort(sortableManagedObjects(a.Handlers))
 	return nil
 }
 
 // managedObject represents a registered managed object.
-type managedObject struct {
-	oid asn1.Oid
+type ManagedObject struct {
+	Oid asn1.Oid
 	// TODO Add type check inside the agent processing.
-	typ reflect.Type
-	get Getter
-	set Setter
+	Typ reflect.Type
+	Get Getter
+	Set Setter
 }
 
 // sortableManagedObjects is a helper type to sort managed objects slices.
-type sortableManagedObjects []managedObject
+type SortableManagedObjects []ManagedObject
 
-func (h sortableManagedObjects) Len() int      { return len(h) }
-func (h sortableManagedObjects) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
-func (h sortableManagedObjects) Less(i, j int) bool {
-	return h[i].oid.Cmp(h[j].oid) < 0
+func (h SortableManagedObjects) Len() int      { return len(h) }
+func (h SortableManagedObjects) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
+func (h SortableManagedObjects) Less(i, j int) bool {
+	return h[i].Oid.Cmp(h[j].Oid) < 0
 }
 
 // getManagedObject returns the exact managed object for the given OID when
 // next=false  or the next object when next=true.
-func (a *Agent) getManagedObject(oid asn1.Oid, next bool) *managedObject {
-	for _, h := range a.handlers {
-		cmp := oid.Cmp(h.oid)
+func (a *Agent) GetManagedObject(oid asn1.Oid, next bool) *ManagedObject {
+	for _, h := range a.Handlers {
+		cmp := oid.Cmp(h.Oid)
 		if (!next && cmp == 0) || (next && cmp < 0) {
 			return &h
 		}
@@ -232,19 +232,19 @@ func (a *Agent) getManagedObject(oid asn1.Oid, next bool) *managedObject {
 // ProcessMessage handles a SNMP Message.
 func (a *Agent) ProcessMessage(request *Message) (response *Message, err error) {
 	// SNMPv1 only for now
-	if request.Version != 0 {
+	if request.Version == 3 {
 		// Discard SNMPv2 messages
 		err = fmt.Errorf("invalid SNMP version %d", request.Version)
 		return
 	}
 
-	rw, err := a.checkCommunity(request.Community)
+	rw, err := a.CheckCommunity(request.Community)
 	if err != nil {
 		return
 	}
 
 	// Dispatch each type of PDU
-	a.log.Printf("request: %#v\n", request)
+	a.Log.Printf("request: %#v\n", request)
 	var res GetResponsePdu
 	switch pdu := request.Pdu.(type) {
 	case GetRequestPdu:
@@ -271,7 +271,7 @@ func (a *Agent) ProcessMessage(request *Message) (response *Message, err error) 
 
 	// Set response
 	response.Pdu = res
-	a.log.Printf("response: %#v\n", response)
+	a.Log.Printf("response: %#v\n", response)
 	return
 }
 
@@ -300,7 +300,7 @@ func (a *Agent) ProcessDatagram(requestBytes []byte) (responseBytes []byte, err 
 }
 
 // processPdu handles SNMPv1 requests with exception of SnmpV1TrapPdu.
-func (a *Agent) processPdu(pdu Pdu, next bool, set bool) GetResponsePdu {
+func (a *Agent) ProcessPdu(pdu Pdu, next bool, set bool) GetResponsePdu {
 
 	// Keep returned values in a separated slice for a Get request
 	var variables []Variable
@@ -308,9 +308,9 @@ func (a *Agent) processPdu(pdu Pdu, next bool, set bool) GetResponsePdu {
 	var err error
 	res := GetResponsePdu(pdu)
 	for i, v := range pdu.Variables {
-		a.log.Printf("oid: %s\n", v.Name)
+		a.Log.Printf("oid: %s\n", v.Name)
 		// Retrieve the managed object
-		h := a.getManagedObject(v.Name, next)
+		h := a.GetManagedObject(v.Name, next)
 		if h == nil {
 			res.ErrorIndex = i + 1
 			res.ErrorStatus = NoSuchName
@@ -319,9 +319,9 @@ func (a *Agent) processPdu(pdu Pdu, next bool, set bool) GetResponsePdu {
 		// Set or get the value
 		var value interface{}
 		if set {
-			err = h.set(h.oid, v.Value)
+			err = h.Set(h.Oid, v.Value)
 		} else {
-			value, err = h.get(h.oid)
+			value, err = h.Get(h.Oid)
 		}
 		if err != nil {
 			res.ErrorIndex = i + 1
@@ -335,7 +335,7 @@ func (a *Agent) processPdu(pdu Pdu, next bool, set bool) GetResponsePdu {
 		// Values returned by a Get are kept in a separated list. If an error
 		// occurs the original list of variables should be returned.
 		if !set {
-			variables = append(variables, Variable{h.oid, value})
+			variables = append(variables, Variable{h.Oid, value})
 		}
 	}
 	if !set {
