@@ -30,7 +30,7 @@ func TestGet(t *testing.T) {
 
 	uptime := 123
 	agent := NewAgent()
-	agent.SetCommunities("publ", "priv")
+	agent.SetCommunities("public", "private")
 	agent.AddRoManagedObject(uptimeOid,
 		func(oid asn1.Oid) (interface{}, error) {
 			return uptime, nil

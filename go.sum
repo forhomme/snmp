@@ -1,0 +1,4 @@
+github.com/PromonLogicalis/asn1 v0.0.0-20190312173541-d60463189a56 h1:zL3Ph7RCZadAPb7QV0gMIDmjuZHFawNhoPZ5erh6TRw=
+github.com/PromonLogicalis/asn1 v0.0.0-20190312173541-d60463189a56/go.mod h1:nE9BGpMlMfM9Z3U+P+mWtcHNDwHcGctalMx1VTkODAY=
+github.com/forhomme/snmp v0.0.0-20200130055756-881177560c0e h1:2lJaDfZdTroSu6Y7582toNKj9yWuK50Mw8WUck+2i7w=
+github.com/forhomme/snmp v0.0.0-20200130055756-881177560c0e/go.mod h1:PyKaW6Kn0Yb9IiHXesOaC1AU9O4UQ6IfbFNvTPtwpAk=

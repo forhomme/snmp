@@ -345,6 +345,31 @@ func (a *Agent) ProcessPdu(pdu Pdu, next bool, set bool) GetResponsePdu {
 	return res
 }
 
+func (a *Agent) ProcessBulkPdu(bulkpdu BulkPdu, next bool, set bool) GetBulkRequestPdu {
+
+	// Keep returned values in a separated slice for a Get request
+	var variables []Variable
+
+	res := GetBulkRequestPdu(bulkpdu)
+	for _, v := range bulkpdu.Variables {
+		a.Log.Printf("oid: %s\n", v.Name)
+		h := a.GetManagedObject(v.Name, next)
+		if h == nil {
+			return res
+		}
+
+		// get value
+		var value interface{}
+		value, err := h.Get(h.Oid)
+		if err != nil {
+			log.Fatalf("Error : ", err)
+		}
+		variables = append(variables, Variable{h.Oid, value})
+	}
+	res.Variables = variables
+	return res
+}
+
 // VarError is an error type that can be returned by a Getter or a Setter. When
 // VarError is returned, it Status is used in the SNMP response.
 type VarError struct {

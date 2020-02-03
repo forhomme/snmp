@@ -6,14 +6,14 @@ import (
 	"time"
 
 	"github.com/PromonLogicalis/asn1"
-	"github.com/PromonLogicalis/snmp"
+	"github.com/forhomme/snmp"
 )
 
 func main() {
 	agent := snmp.NewAgent()
 
 	// Set the read-only and read-write communities
-	agent.SetCommunities("publ", "priv")
+	agent.SetCommunities("public", "private")
 
 	// Register a read-only OID.
 	since := time.Now()
