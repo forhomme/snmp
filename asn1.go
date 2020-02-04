@@ -77,7 +77,7 @@ type V1TrapPdu struct {
 }
 
 // GetBulkRequestPdu is used for bulk requests.
-type GetBulkRequestPdu BulkPdu
+type GetBulkRequestPdu Pdu
 
 // InformRequestPdu is used for inform requests.
 type InformRequestPdu Pdu

@@ -231,9 +231,8 @@ func (a *Agent) GetManagedObject(oid asn1.Oid, next bool) *ManagedObject {
 
 // ProcessMessage handles a SNMP Message.
 func (a *Agent) ProcessMessage(request *Message) (response *Message, err error) {
-	// SNMPv1 only for now
 	if request.Version == 3 {
-		// Discard SNMPv2 messages
+		// Discard SNMPv3 messages
 		err = fmt.Errorf("invalid SNMP version %d", request.Version)
 		return
 	}
@@ -259,6 +258,8 @@ func (a *Agent) ProcessMessage(request *Message) (response *Message, err error) 
 			res.ErrorIndex = 1
 			res.ErrorStatus = NoSuchName
 		}
+	case GetBulkRequestPdu:
+		res = a.ProcessBulkPdu(Pdu(pdu), true, false)
 	default:
 		// SNMPv2 PDUs are ignored
 		err = fmt.Errorf("PDU not supported: %T", request.Pdu)
@@ -345,13 +346,13 @@ func (a *Agent) ProcessPdu(pdu Pdu, next bool, set bool) GetResponsePdu {
 	return res
 }
 
-func (a *Agent) ProcessBulkPdu(bulkpdu BulkPdu, next bool, set bool) GetBulkRequestPdu {
+func (a *Agent) ProcessBulkPdu(pdu Pdu, next bool, set bool) GetResponsePdu {
 
 	// Keep returned values in a separated slice for a Get request
 	var variables []Variable
 
-	res := GetBulkRequestPdu(bulkpdu)
-	for _, v := range bulkpdu.Variables {
+	res := GetResponsePdu(pdu)
+	for _, v := range pdu.Variables {
 		a.Log.Printf("oid: %s\n", v.Name)
 		h := a.GetManagedObject(v.Name, next)
 		if h == nil {

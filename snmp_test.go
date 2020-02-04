@@ -1,7 +1,8 @@
-package snmp
+package snmp_test
 
 import (
 	"fmt"
+	"snmp"
 	"testing"
 
 	"github.com/PromonLogicalis/asn1"
@@ -29,8 +30,8 @@ func TestGet(t *testing.T) {
 	data := getResquestForTest()
 
 	uptime := 123
-	agent := NewAgent()
-	agent.SetCommunities("public", "private")
+	agent := snmp.NewAgent()
+	agent.SetCommunities("publ", "private")
 	agent.AddRoManagedObject(uptimeOid,
 		func(oid asn1.Oid) (interface{}, error) {
 			return uptime, nil
@@ -40,12 +41,12 @@ func TestGet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	message := Message{}
-	_, err = Asn1Context().Decode(data, &message)
+	message := snmp.Message{}
+	_, err = snmp.Asn1Context().Decode(data, &message)
 	if err != nil {
 		t.Fatal(err)
 	}
-	response, ok := message.Pdu.(GetResponsePdu)
+	response, ok := message.Pdu.(snmp.GetResponsePdu)
 	if !ok {
 		t.Fatalf("Invalid PDU type: %T\n", message.Pdu)
 	}
@@ -65,7 +66,7 @@ func TestNoSuchName(t *testing.T) {
 	uptimeOid := asn1.Oid{1, 3, 6, 1, 2, 1, 1, 3}
 	data := getResquestForTest()
 
-	agent := NewAgent()
+	agent := snmp.NewAgent()
 	agent.SetCommunities("publ", "priv")
 	agent.AddRoManagedObject(uptimeOid,
 		func(oid asn1.Oid) (interface{}, error) {
@@ -76,19 +77,19 @@ func TestNoSuchName(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	message := Message{}
-	_, err = Asn1Context().Decode(data, &message)
+	message := snmp.Message{}
+	_, err = snmp.Asn1Context().Decode(data, &message)
 	if err != nil {
 		t.Fatal(err)
 	}
-	response, ok := message.Pdu.(GetResponsePdu)
+	response, ok := message.Pdu.(snmp.GetResponsePdu)
 	if !ok {
 		t.Fatalf("Invalid PDU type: %T\n", message.Pdu)
 	}
-	if response.ErrorStatus != NoSuchName {
+	if response.ErrorStatus != snmp.NoSuchName {
 		t.Fatalf(
 			"Response should contain error %d. Got %d instead.\n",
-			NoSuchName, response.ErrorStatus)
+			snmp.NoSuchName, response.ErrorStatus)
 	}
 }
 
@@ -97,30 +98,30 @@ func TestError(t *testing.T) {
 	uptimeOid := asn1.Oid{1, 3, 6, 1, 2, 1, 1, 3, 0}
 	data := getResquestForTest()
 
-	agent := NewAgent()
+	agent := snmp.NewAgent()
 	agent.SetCommunities("publ", "priv")
 	agent.AddRoManagedObject(uptimeOid,
 		func(oid asn1.Oid) (interface{}, error) {
-			return nil, VarErrorf(BadValue, "error")
+			return nil, snmp.VarErrorf(snmp.BadValue, "error")
 		})
 	data, err := agent.ProcessDatagram(data)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	message := Message{}
-	_, err = Asn1Context().Decode(data, &message)
+	message := snmp.Message{}
+	_, err = snmp.Asn1Context().Decode(data, &message)
 	if err != nil {
 		t.Fatal(err)
 	}
-	response, ok := message.Pdu.(GetResponsePdu)
+	response, ok := message.Pdu.(snmp.GetResponsePdu)
 	if !ok {
 		t.Fatalf("Invalid PDU type: %T\n", message.Pdu)
 	}
-	if response.ErrorStatus != BadValue {
+	if response.ErrorStatus != snmp.BadValue {
 		t.Fatalf(
 			"Response should contain error %d. Got %d instead.\n",
-			BadValue, response.ErrorStatus)
+			snmp.BadValue, response.ErrorStatus)
 	}
 }
 
@@ -130,7 +131,7 @@ func TestCommunity(t *testing.T) {
 	data := getResquestForTest()
 
 	uptime := 123
-	agent := NewAgent()
+	agent := snmp.NewAgent()
 	agent.SetCommunities("secret", "secret")
 	agent.AddRoManagedObject(uptimeOid,
 		func(oid asn1.Oid) (interface{}, error) {
@@ -144,10 +145,10 @@ func TestCommunity(t *testing.T) {
 
 func TestString(t *testing.T) {
 	objs := []fmt.Stringer{
-		IPAddress{192, 168, 0, 1},
-		NoSuchObject{},
-		NoSuchInstance{},
-		EndOfMibView{},
+		snmp.IPAddress{192, 168, 0, 1},
+		snmp.NoSuchObject{},
+		snmp.NoSuchInstance{},
+		snmp.EndOfMibView{},
 	}
 	for _, obj := range objs {
 		if len(obj.String()) == 0 {
